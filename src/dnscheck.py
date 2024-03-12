@@ -72,9 +72,11 @@ def main():
     parser.add_argument('-i', '--input', metavar='<file>', dest="input_file",
                         type=validate_file_path, required=True, help='CSV file containing a list of domains')
 
+    parser.add_argument("--input-type", choices=['txt', 'csv'], default='csv', dest="input_type",
+                        help="Type of input file to process (txt or csv). (Default=csv)")
+
     parser.add_argument('--host-ip', metavar='IP/HOST', dest="host_field",
-                        type=str, required=False, default='Domain',
-                        help='CSV field of host or IP. (default=Domain)')
+                        type=str, required=False, help='CSV field of host or IP. (default=Domain)')
 
     parser.add_argument("--ns", metavar='8.8.8.8', dest="ns",
                         nargs='+', type=parse_ip_list, help="List of DNS server addresses")
@@ -99,6 +101,13 @@ def main():
 
     args = parser.parse_args()
 
+    if args.input_type == 'csv':
+        if not args.host_field:
+            args.host_field='Domain'
+
+    if not args.input_type == 'csv':
+        if args.host_field:
+            parser.error("--host-ip can not be used with type '{}'".format(args.input_type))
 
     if args.input_file:
         print("Input file:", args.input_file)
@@ -114,9 +123,19 @@ def main():
     spf_pattern = re.compile(r'^v=spf', re.IGNORECASE)
 
     with open(args.input_file, 'r', encoding='utf-8-sig') as input_file:
-        reader = csv.DictReader(input_file)
+        reader = input_file
+        if args.input_type == 'csv':
+            reader = csv.DictReader(input_file)
         for line in reader:
-            host = line[args.host_field].strip()
+            host = ''
+            if args.input_type == 'csv':
+                host = line[args.host_field].strip()
+            else:
+                line = line.strip()
+                if not line:
+                    continue
+                host = line.split()[0]
+
             print("Processing:", host)
 
             if args.dmarc_flag:
