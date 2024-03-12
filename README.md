@@ -1,6 +1,6 @@
 # Bulk DNS Query Tool
 
-This tool helps identify the top senders based on smart search outbound message exports or CSV data.
+This tool allow for bulk DNS lookups via CSV or TXT file passed as an argument.
 
 ### Requirements:
 
