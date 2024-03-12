@@ -18,13 +18,14 @@ DATA_TYPE_A = 'A Data'
 
 custom_resolver = resolver.Resolver()
 
-def validate_file_path(file_path):
+
+def validate_file_path(file_path: str):
     if not os.path.exists(file_path):
         raise argparse.ArgumentTypeError(f"File '{file_path}' does not exist.")
     return file_path
 
 
-def validate_xlsx_file(file_path):
+def validate_xlsx_file(file_path: str):
     if not file_path.lower().endswith('.xlsx'):
         raise argparse.ArgumentTypeError("File must have a .xlsx extension.")
     return file_path
@@ -73,6 +74,10 @@ def main():
     parser.add_argument('-i', '--input', metavar='<file>', dest="input_file",
                         type=validate_file_path, required=True, help='CSV file containing a list of domains')
 
+    parser.add_argument('--host-ip', metavar='IP/HOST', dest="host_field",
+                        type=str, required=False, default='Domain',
+                        help='CSV field of host or IP. (default=Domain)')
+
     parser.add_argument("--ns", metavar='8.8.8.8', dest="ns",
                         nargs='+', type=parse_ip_list, help="List of DNS server addresses")
 
@@ -85,10 +90,10 @@ def main():
     parser.add_argument('--mx', action="store_true", dest="mx_flag",
                         help='MX record lookup')
 
-    parser.add_argument('-a','--forward', action="store_true", dest="a_flag",
+    parser.add_argument('-a', '--forward', action="store_true", dest="a_flag",
                         help='A record lookup')
 
-    parser.add_argument('-x','--reverse', action="store_true", dest="reverse_flag",
+    parser.add_argument('-x', '--reverse', action="store_true", dest="reverse_flag",
                         help='PTR record lookup, ip to host')
 
     parser.add_argument('-o', '--output', metavar='<xlsx>', dest="output_file", type=validate_xlsx_file, required=True,
@@ -105,14 +110,13 @@ def main():
 
     dns_data = {}
 
-    dmarc_pattern = re.compile(r'.', re.IGNORECASE)
+    # Patter to match SPF record
     spf_pattern = re.compile(r'^v=spf', re.IGNORECASE)
-    mx_pattern = re.compile(r'.', re.IGNORECASE)
 
     with open(args.input_file, 'r', encoding='utf-8-sig') as input_file:
         reader = csv.DictReader(input_file)
         for line in reader:
-            host = line['Domain'].strip()
+            host = line[args.host_field].strip()
 
             if args.dmarc_flag:
                 dns_data.setdefault(DATA_TYPE_DMARC, {'max_cols': 0, 'data': []})
