@@ -1,0 +1,27 @@
+[build-system]
+requires = ['setuptools', 'setuptools-scm']
+build-backend = "setuptools.build_meta"
+
+[tools.setuptools.packages.find]
+where = ["src"]
+
+[project]
+name = "dnscheck"
+version = "1.0.0
+readme = "README.md"
+description = "Bulk DNS Record Checker"
+license = { text = "MIT" }
+requires-python = ">3.9"
+dependencies = [
+    'xlsxwriter',
+    'dnspython '
+]
+
+[project.urls]
+repository = "https://github.com/pfptcommunity/dnscheck"
+#homepage = "https://github.com/pfptcommunity/dnscheck"
+#documentation = "https://github.com/pfptcommunity/dnscheck"
+#changelog = "https://github.com/pfptcommunity/dnscheck"
+
+[project.scripts]
+dnscheck = "dnscheck:main"
