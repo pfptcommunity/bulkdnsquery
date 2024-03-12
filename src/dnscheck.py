@@ -13,7 +13,8 @@ import xlsxwriter
 DATA_TYPE_DMARC = 'DMARC Data'
 DATA_TYPE_SPF = 'SPF Data'
 DATA_TYPE_MX = 'MX Data'
-DATA_TYPE_RDNS = 'RDNS Data'
+DATA_TYPE_PTR = 'PTR Data'
+DATA_TYPE_A = 'A Data'
 
 custom_resolver = resolver.Resolver()
 
@@ -84,7 +85,10 @@ def main():
     parser.add_argument('--mx', action="store_true", dest="mx_flag",
                         help='MX record lookup')
 
-    parser.add_argument('--rdns', action="store_true", dest="reverse_flag",
+    parser.add_argument('-a','--forward', action="store_true", dest="a_flag",
+                        help='A record lookup')
+
+    parser.add_argument('-x','--reverse', action="store_true", dest="reverse_flag",
                         help='PTR record lookup, ip to host')
 
     parser.add_argument('-o', '--output', metavar='<xlsx>', dest="output_file", type=validate_xlsx_file, required=True,
@@ -128,12 +132,18 @@ def main():
                 dns_data[DATA_TYPE_MX]['max_cols'] = max(len(data), dns_data[DATA_TYPE_MX]['max_cols'])
                 dns_data[DATA_TYPE_MX]['data'].append([host] + data)
 
+            if args.a_flag:
+                dns_data.setdefault(DATA_TYPE_A, {'max_cols': 0, 'data': []})
+                data = dns_lookup(host, 'A')
+                dns_data[DATA_TYPE_A]['max_cols'] = max(len(data), dns_data[DATA_TYPE_A]['max_cols'])
+                dns_data[DATA_TYPE_A]['data'].append([host] + data)
+
             if args.reverse_flag:
-                dns_data.setdefault(DATA_TYPE_RDNS, {'max_cols': 0, 'data': []})
+                dns_data.setdefault(DATA_TYPE_PTR, {'max_cols': 0, 'data': []})
                 reversed_ip = reversename.from_address(host)
                 data = dns_lookup(reversed_ip, 'PTR')
-                dns_data[DATA_TYPE_RDNS]['max_cols'] = max(len(data), dns_data[DATA_TYPE_RDNS]['max_cols'])
-                dns_data[DATA_TYPE_RDNS]['data'].append([host] + data)
+                dns_data[DATA_TYPE_PTR]['max_cols'] = max(len(data), dns_data[DATA_TYPE_PTR]['max_cols'])
+                dns_data[DATA_TYPE_PTR]['data'].append([host] + data)
 
     workbook = xlsxwriter.Workbook(args.output_file)
 
