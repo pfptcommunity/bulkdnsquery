@@ -21,6 +21,8 @@ DATA_TYPE_A = 'A Data'
 # Initialize a custom resolver
 custom_resolver = resolver.Resolver()
 
+# Pattern to match SPF record
+spf_pattern = re.compile(r'^v=spf', re.IGNORECASE)
 
 def validate_file_path(file_path: str) -> str:
     """Validate if the file path exists."""
@@ -71,7 +73,7 @@ def get_record_text(rdata: Answer) -> str:
         return rdata.to_text().strip('.')
 
 
-def process_domain(host: str, args: argparse.Namespace, dns_data: dict, spf_pattern: re.Pattern) -> None:
+def process_domain(host: str, args: argparse.Namespace, dns_data: dict) -> None:
     """Process DNS lookup for a single domain."""
     if args.dmarc_flag:
         dns_data.setdefault(DATA_TYPE_DMARC, {'max_cols': 0, 'data': []})
@@ -196,9 +198,6 @@ def main():
 
     print("Nameserver(s):", custom_resolver.nameservers)
 
-    # Pattern to match SPF record
-    spf_pattern = re.compile(r'^v=spf', re.IGNORECASE)
-
     dns_data = {}
 
     with open(args.input_file, 'r', encoding='utf-8-sig') as input_file:
@@ -208,7 +207,7 @@ def main():
             if not host:
                 continue
             print("Processing:", host)
-            process_domain(host, args, dns_data, spf_pattern)
+            process_domain(host, args, dns_data)
 
     if args.compact_flag:
         write_to_excel_compact(dns_data, args.output_file)
