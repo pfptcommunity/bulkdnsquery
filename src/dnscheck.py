@@ -58,7 +58,6 @@ def dns_lookup(qname: Union[Name, str], rdtype: Union[RdataType, str], pattern: 
     except Exception as e:
         records.append(str(e))
 
-    print(records)
     return records
 
 
@@ -117,6 +116,7 @@ def main():
         reader = csv.DictReader(input_file)
         for line in reader:
             host = line[args.host_field].strip()
+            print("Processing:", host)
 
             if args.dmarc_flag:
                 dns_data.setdefault(DATA_TYPE_DMARC, {'max_cols': 0, 'data': []})
