@@ -1,6 +1,6 @@
 # Bulk DNS Query Tool
 
-This tool helps identify the top senders based on smart search outbound message exports or CSV data.
+This tool allow for bulk DNS lookups via CSV or TXT file passed as an argument.
 
 ### Requirements:
 
@@ -41,3 +41,21 @@ optional arguments:
   -c, --compact               Compact format will add multiple records to single column.
   -o <xlsx>, --output <xlsx>  Output file
 ```
+
+### Sample Output
+
+Data tabs are base on the selected lookup information. In the examples below DMARC, SPF, MX, and A records were selected for the the batch lookup. The ouput is in compact form.
+
+View of DMARC Records
+![image](https://github.com/pfptcommunity/dnscheck/assets/83429267/6ff467fa-42d0-4f8f-8927-d27c8c9d466b)
+
+View of SPF Data
+![image](https://github.com/pfptcommunity/dnscheck/assets/83429267/2360b8e0-9c03-46a8-af99-7213d8a458aa)
+
+View of MX Data
+![image](https://github.com/pfptcommunity/dnscheck/assets/83429267/a50bbbe4-f787-4112-8df5-9657bf9a24ca)
+
+View of A Data
+![image](https://github.com/pfptcommunity/dnscheck/assets/83429267/017ee0fc-7452-4c5e-9956-0424f3c2cc70)
+
+
