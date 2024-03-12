@@ -18,7 +18,6 @@ DATA_TYPE_A = 'A Data'
 
 custom_resolver = resolver.Resolver()
 
-
 def validate_file_path(file_path: str):
     if not os.path.exists(file_path):
         raise argparse.ArgumentTypeError(f"File '{file_path}' does not exist.")
@@ -100,12 +99,14 @@ def main():
 
     args = parser.parse_args()
 
+
     if args.input_file:
         print("Input file:", args.input_file)
 
     if args.ns:
-        print('Nameserver:', args.ns)
         custom_resolver.nameservers = args.ns
+
+    print("Nameserver(s):", custom_resolver.nameservers)
 
     dns_data = {}
 
