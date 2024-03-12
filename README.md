@@ -1,4 +1,4 @@
-# Bulk DNS Record Checker
+# Bulk DNS Query Tool
 
 This tool helps identify the top senders based on smart search outbound message exports or CSV data.
 
