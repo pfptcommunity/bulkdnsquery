@@ -2,12 +2,16 @@
 requires = ['setuptools', 'setuptools-scm']
 build-backend = "setuptools.build_meta"
 
+[tool.setuptools_scm]
+version_scheme = "post-release"
+local_scheme = "node-and-date"
+
 [tools.setuptools.packages.find]
 where = ["src"]
 
 [project]
 name = "dnscheck"
-version = "1.0.0"
+dynamic = ["version"]
 readme = "README.md"
 description = "Bulk DNS Query Tool"
 license = { text = "MIT" }
