@@ -1,5 +1,5 @@
 # Bulk DNS Query Tool
-
+[![PyPI Downloads](https://static.pepy.tech/badge/dnscheck)](https://pepy.tech/projects/dnscheck)
 This tool allow for bulk DNS lookups via CSV or TXT file passed as an argument.
 
 ### Requirements:
