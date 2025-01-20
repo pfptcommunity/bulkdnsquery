@@ -1,6 +1,7 @@
 import argparse
 import csv
 import ipaddress
+import logging
 import os
 import re
 import sys
@@ -25,12 +26,14 @@ custom_resolver = resolver.Resolver()
 # Pattern to match SPF record
 spf_pattern = re.compile(r'^v=spf', re.IGNORECASE)
 
-def is_ip(ip_or_host :str) -> bool:
+
+def is_ip(ip_or_host: str) -> bool:
     try:
         ipaddress.ip_address(ip_or_host)
         return True
     except ValueError:
-        return  False
+        return False
+
 
 def validate_file_path(file_path: str) -> str:
     """Validate if the file path exists."""
@@ -123,27 +126,26 @@ def process_reverse(ip: str, dns_data: dict) -> None:
     process_dns_record(ip, dns_data, 'PTR', DATA_TYPE_PTR, lambda: dns_lookup(reversed_ip, 'PTR'))
 
 
-def process_domain(host: str, args: argparse.Namespace, dns_data: dict) -> None:
+def process_domain(host_or_ip: str, args: argparse.Namespace, dns_data: dict) -> None:
     """Process DNS lookup for a single domain."""
-    if args.dmarc_flag:
-        if not is_ip(host):
-            process_dmarc(host, dns_data)
+    logging.info(f"Processing: {host_or_ip}")
+    if not is_ip(host_or_ip):
+        if args.dmarc_flag:
+            process_dmarc(host_or_ip, dns_data)
+        if args.spf_flag:
+            process_spf(host_or_ip, dns_data)
+        if args.mx_flag:
+            process_mx(host_or_ip, dns_data)
+        if args.a_flag:
+            process_a(host_or_ip, dns_data)
+    else:
+        logging.warning(f"Skipping DMARC/SPF/MX/A lookup for IP: {host_or_ip}")
 
-    if args.spf_flag:
-        if not is_ip(host):
-            process_spf(host, dns_data)
-
-    if args.mx_flag:
-        if not is_ip(host):
-            process_mx(host, dns_data)
-
-    if args.a_flag:
-        if not is_ip(host):
-            process_a(host, dns_data)
-
-    if args.reverse_flag:
-        if is_ip(host):
-            process_reverse(host, dns_data)
+    if is_ip(host_or_ip):
+        if args.a_flag:
+            process_a(host_or_ip, dns_data)
+    else:
+        logging.warning(f"Skipping PTR lookup for HOST: {host_or_ip}")
 
 
 def write_to_excel(dns_data: dict, output_file: str, compact: bool = False) -> None:
@@ -205,16 +207,40 @@ def main():
     parser.add_argument('-a', '--forward', action="store_true", dest="a_flag", help='A record lookup')
     parser.add_argument('-x', '--reverse', action="store_true", dest="reverse_flag",
                         help='PTR record lookup, ip to host')
+    parser.add_argument('--include-all', action="store_true", dest="include_all",
+                        help='Include all lookups.')
     parser.add_argument('-c', '--compact', action="store_true", dest="compact_flag",
                         help='Compact format will add multiple records to single column.')
     parser.add_argument('-o', '--output', metavar='<xlsx>', dest="output_file", type=validate_xlsx_file,
                         required=True, help='Output file')
+    parser.add_argument(
+        "--log-level",
+        type=str,
+        default="INFO",  # Default to INFO
+        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        help="Set the logging level (default: INFO)."
+    )
 
-    if len(sys.argv) == 1:
+    if not sys.argv[1:]:
         parser.print_usage()  # Print usage information if no arguments are passed
         sys.exit(1)
 
     args = parser.parse_args()
+
+    # Map the log level argument to the logging module's constants
+    log_level = getattr(logging, args.log_level.upper(), logging.INFO)
+
+    # Configure logging with ISO 8601 date format
+    logging.basicConfig(
+        level=log_level,
+        format="[%(asctime)s] [%(levelname)s] - %(message)s",
+        datefmt="%Y-%m-%dT%H:%M:%S",  # ISO 8601 format
+        handlers=[
+            logging.StreamHandler()
+        ]
+    )
+
+    logging.info(f"Logging set to level: {args.log_level.upper()}")
 
     if args.input_type == 'csv' and not args.host_field:
         args.host_field = 'Host'
@@ -223,23 +249,32 @@ def main():
         parser.error("--host-ip can not be used with type '{}'".format(args.input_type))
 
     if args.input_file:
-        print("Input file:", args.input_file)
+        logging.info(f"Input file: {args.input_file}")
 
     if args.ns:
         custom_resolver.nameservers = args.ns
+        logging.info(f"Using custom DNS nameserver(s): {custom_resolver.nameservers}")
+    else:
+        # Get the system's default resolver
+        default_resolver = dns.resolver.Resolver()
+        logging.info(f"Using system default DNS nameserver(s): {default_resolver.nameservers}")
 
-    print("Nameserver(s):", custom_resolver.nameservers)
+    if args.include_all:
+        args.dmarc_flag = True
+        args.spf_flag = True
+        args.mx_flag = True
+        args.a_flag = True
+        args.reverse_flag = True
 
     dns_data = {}
 
     with open(args.input_file, 'r', encoding='utf-8-sig') as input_file:
         reader = csv.DictReader(input_file) if args.input_type == 'csv' else input_file
         for line in reader:
-            host = line[args.host_field].strip() if args.input_type == 'csv' else line.strip()
-            if not host:
+            host_or_ip = line[args.host_field].strip() if args.input_type == 'csv' else line.strip()
+            if not host_or_ip:
                 continue
-            print("Processing:", host)
-            process_domain(host, args, dns_data)
+            process_domain(host_or_ip, args, dns_data)
 
     write_to_excel(dns_data, args.output_file, args.compact_flag)
 
