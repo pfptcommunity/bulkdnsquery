@@ -143,7 +143,7 @@ def process_domain(host_or_ip: str, args: argparse.Namespace, dns_data: dict) ->
 
     if is_ip(host_or_ip):
         if args.a_flag:
-            process_a(host_or_ip, dns_data)
+            process_reverse(host_or_ip, dns_data)
     else:
         logging.warning(f"Skipping PTR lookup for HOST: {host_or_ip}")
 
