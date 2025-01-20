@@ -6,6 +6,7 @@ import re
 import sys
 from typing import Union, Optional
 
+import dns
 import xlsxwriter
 from dns import rdatatype, resolver, reversename
 from dns.name import Name
@@ -23,6 +24,13 @@ custom_resolver = resolver.Resolver()
 
 # Pattern to match SPF record
 spf_pattern = re.compile(r'^v=spf', re.IGNORECASE)
+
+def is_ip(ip_or_host :str) -> bool:
+    try:
+        ipaddress.ip_address(ip_or_host)
+        return True
+    except ValueError:
+        return  False
 
 def validate_file_path(file_path: str) -> str:
     """Validate if the file path exists."""
@@ -57,8 +65,16 @@ def dns_lookup(qname: Union[str, Name], rdtype: Union[RdataType, str], pattern: 
             if pattern is None or pattern.match(record_text):
                 records.append(record_text)
         return records
+    except dns.resolver.NXDOMAIN:
+        return ["No such domain"]
+    except dns.resolver.Timeout:
+        return ["Query timed out"]
+    except dns.resolver.NoAnswer:
+        return ["No answer from DNS server"]
+    except dns.resolver.NoNameservers:
+        return ["No nameservers available"]
     except Exception as e:
-        return [str(e)]
+        return [f"Unexpected error: {str(e)}"]
 
 
 def get_record_text(rdata: Answer) -> str:
@@ -73,98 +89,114 @@ def get_record_text(rdata: Answer) -> str:
         return rdata.to_text().strip('.')
 
 
+def process_dns_record(ip_or_host: str, dns_data: dict, record_type: str, key: str, data_func) -> None:
+    """Generic function to process DNS records."""
+    dns_data.setdefault(key, {'max_cols': 0, 'data': []})
+    data = data_func()
+    dns_data[key]['max_cols'] = max(len(data), dns_data[key]['max_cols'])
+    dns_data[key]['data'].append([ip_or_host] + data)
+
+
+def process_dmarc(host: str, dns_data: dict) -> None:
+    """Process DMARC lookup for a domain."""
+    process_dns_record(host, dns_data, 'TXT', DATA_TYPE_DMARC, lambda: dns_lookup(f'_dmarc.{host}', 'TXT'))
+
+
+def process_spf(host: str, dns_data: dict) -> None:
+    """Process SPF lookup for a domain."""
+    process_dns_record(host, dns_data, 'TXT', DATA_TYPE_SPF, lambda: dns_lookup(host, 'TXT', spf_pattern))
+
+
+def process_mx(host: str, dns_data: dict) -> None:
+    """Process MX lookup for a domain."""
+    process_dns_record(host, dns_data, 'MX', DATA_TYPE_MX, lambda: dns_lookup(host, 'MX'))
+
+
+def process_a(host: str, dns_data: dict) -> None:
+    """Process A record lookup for a domain."""
+    process_dns_record(host, dns_data, 'A', DATA_TYPE_A, lambda: dns_lookup(host, 'A'))
+
+
+def process_reverse(ip: str, dns_data: dict) -> None:
+    """Process reverse DNS lookup for a domain."""
+    reversed_ip = reversename.from_address(ip)
+    process_dns_record(ip, dns_data, 'PTR', DATA_TYPE_PTR, lambda: dns_lookup(reversed_ip, 'PTR'))
+
+
 def process_domain(host: str, args: argparse.Namespace, dns_data: dict) -> None:
     """Process DNS lookup for a single domain."""
     if args.dmarc_flag:
-        dns_data.setdefault(DATA_TYPE_DMARC, {'max_cols': 0, 'data': []})
-        data = dns_lookup(f'_dmarc.{host}', 'TXT')
-        dns_data[DATA_TYPE_DMARC]['max_cols'] = max(len(data), dns_data[DATA_TYPE_DMARC]['max_cols'])
-        dns_data[DATA_TYPE_DMARC]['data'].append([host] + data)
+        if not is_ip(host):
+            process_dmarc(host, dns_data)
 
     if args.spf_flag:
-        dns_data.setdefault(DATA_TYPE_SPF, {'max_cols': 0, 'data': []})
-        data = dns_lookup(host, 'TXT', spf_pattern)
-        dns_data[DATA_TYPE_SPF]['max_cols'] = max(len(data), dns_data[DATA_TYPE_SPF]['max_cols'])
-        dns_data[DATA_TYPE_SPF]['data'].append([host] + data)
+        if not is_ip(host):
+            process_spf(host, dns_data)
 
     if args.mx_flag:
-        dns_data.setdefault(DATA_TYPE_MX, {'max_cols': 0, 'data': []})
-        data = dns_lookup(host, 'MX')
-        dns_data[DATA_TYPE_MX]['max_cols'] = max(len(data), dns_data[DATA_TYPE_MX]['max_cols'])
-        dns_data[DATA_TYPE_MX]['data'].append([host] + data)
+        if not is_ip(host):
+            process_mx(host, dns_data)
 
     if args.a_flag:
-        dns_data.setdefault(DATA_TYPE_A, {'max_cols': 0, 'data': []})
-        data = dns_lookup(host, 'A')
-        dns_data[DATA_TYPE_A]['max_cols'] = max(len(data), dns_data[DATA_TYPE_A]['max_cols'])
-        dns_data[DATA_TYPE_A]['data'].append([host] + data)
+        if not is_ip(host):
+            process_a(host, dns_data)
 
     if args.reverse_flag:
-        dns_data.setdefault(DATA_TYPE_PTR, {'max_cols': 0, 'data': []})
-        reversed_ip = reversename.from_address(host)
-        data = dns_lookup(reversed_ip, 'PTR')
-        dns_data[DATA_TYPE_PTR]['max_cols'] = max(len(data), dns_data[DATA_TYPE_PTR]['max_cols'])
-        dns_data[DATA_TYPE_PTR]['data'].append([host] + data)
+        if is_ip(host):
+            process_reverse(host, dns_data)
 
 
-def write_to_excel(dns_data: dict, output_file: str) -> None:
-    """Write DNS data to an Excel file."""
+def write_to_excel(dns_data: dict, output_file: str, compact: bool = False) -> None:
+    """Write DNS data to an Excel file. Compact mode combines data columns."""
     workbook = xlsxwriter.Workbook(output_file)
     header_field = workbook.add_format()
     header_field.set_bold()
     dns_sheets = {}
+
     for name, meta in dns_data.items():
         header_name = name.upper().replace(' ', '_')
         dns_sheets[name] = workbook.add_worksheet(name)
         dns_sheets[name].write(0, 0, "Host/IP", header_field)
-        col = 1
-        for i in range(meta['max_cols']):
-            dns_sheets[name].write(0, col, "{}_{}".format(header_name, i), header_field)
-            col += 1
-    for name, meta in dns_data.items():
-        row = 1
-        for row_data in meta['data']:
-            col = 0
-            for col_data in row_data:
-                dns_sheets[name].write(row, col, col_data)
+
+        if compact:
+            dns_sheets[name].write(0, 1, header_name, header_field)
+        else:
+            col = 1
+            for i in range(meta['max_cols']):
+                dns_sheets[name].write(0, col, f"{header_name}_{i}", header_field)
                 col += 1
-            row += 1
-        dns_sheets[name].autofit()
-    workbook.close()
 
-
-def write_to_excel_compact(dns_data: dict, output_file: str) -> None:
-    """Write DNS data to an Excel file."""
-    workbook = xlsxwriter.Workbook(output_file)
-    header_field = workbook.add_format()
-    header_field.set_bold()
-    dns_sheets = {}
-    for name, meta in dns_data.items():
-        header_name = name.upper().replace(' ', '_')
-        dns_sheets[name] = workbook.add_worksheet(name)
-        dns_sheets[name].write(0, 0, "Host/IP", header_field)
-        dns_sheets[name].write(0, 1, header_name, header_field)
     for name, meta in dns_data.items():
         row = 1
         for row_data in meta['data']:
             dns_sheets[name].write(row, 0, row_data[0])
-            cell_format = workbook.add_format({'text_wrap': True})
-            cell_value = '\n'.join(row_data[1:])
-            dns_sheets[name].write(row, 1, cell_value, cell_format)
+
+            if compact:
+                cell_format = workbook.add_format({'text_wrap': True})
+                cell_value = '\n'.join(row_data[1:])
+                dns_sheets[name].write(row, 1, cell_value, cell_format)
+            else:
+                col = 1
+                for col_data in row_data[1:]:
+                    dns_sheets[name].write(row, col, col_data)
+                    col += 1
+
             row += 1
         dns_sheets[name].autofit()
+
     workbook.close()
 
 
 def main():
     # Argument parsing
-    parser = argparse.ArgumentParser(prog="dnscheck", description="Bulk DNS Lookup Tool", formatter_class=lambda prog: argparse.HelpFormatter(prog, max_help_position=80))
+    parser = argparse.ArgumentParser(prog="dnscheck", description="Bulk DNS Lookup Tool",
+                                     formatter_class=lambda prog: argparse.HelpFormatter(prog, max_help_position=80))
     parser.add_argument('-i', '--input', metavar='<file>', dest="input_file", type=validate_file_path,
                         required=True, help='CSV file containing a list of domains')
     parser.add_argument("--input-type", choices=['txt', 'csv'], default='csv', dest="input_type",
                         help="Type of input file to process (txt or csv). (Default=csv)")
     parser.add_argument('--host-ip', metavar='IP/HOST', dest="host_field", type=str, required=False,
-                        help='CSV field of host or IP. (default=Domain)')
+                        help='CSV field of host or IP. (default=Host)')
     parser.add_argument("--ns", metavar='8.8.8.8', dest="ns", nargs='+', type=parse_ip_list,
                         help="List of DNS server addresses")
     parser.add_argument('--dmarc', action="store_true", dest="dmarc_flag", help='DMARC record lookup')
@@ -185,7 +217,7 @@ def main():
     args = parser.parse_args()
 
     if args.input_type == 'csv' and not args.host_field:
-        args.host_field = 'Domain'
+        args.host_field = 'Host'
 
     if args.input_type != 'csv' and args.host_field:
         parser.error("--host-ip can not be used with type '{}'".format(args.input_type))
@@ -209,10 +241,7 @@ def main():
             print("Processing:", host)
             process_domain(host, args, dns_data)
 
-    if args.compact_flag:
-        write_to_excel_compact(dns_data, args.output_file)
-    else:
-        write_to_excel(dns_data, args.output_file)
+    write_to_excel(dns_data, args.output_file, args.compact_flag)
 
     print("Please see report: {}".format(args.output_file))
 
