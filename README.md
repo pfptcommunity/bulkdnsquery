@@ -1,5 +1,5 @@
 # Bulk DNS Query Tool
-[![PyPI Downloads](https://static.pepy.tech/badge/bulkdnsquery)](https://pepy.tech/projects/bulkdnsquery)
+[![PyPI Downloads](https://static.pepy.tech/badge/bulkdnsquery)](https://pepy.tech/projects/bulkdnsquery)  
 This tool allow for bulk DNS lookups via CSV or TXT file passed as an argument.
 
 ### Requirements:
