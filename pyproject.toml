@@ -10,7 +10,7 @@ local_scheme = "node-and-date"
 where = ["src"]
 
 [project]
-name = "dnscheck"
+name = "bulkdnsquery"
 dynamic = ["version"]
 readme = "README.md"
 description = "Bulk DNS Query Tool"
@@ -22,10 +22,10 @@ dependencies = [
 ]
 
 [project.urls]
-repository = "https://github.com/pfptcommunity/dnscheck"
-#homepage = "https://github.com/pfptcommunity/dnscheck"
-#documentation = "https://github.com/pfptcommunity/dnscheck"
-#changelog = "https://github.com/pfptcommunity/dnscheck"
+repository = "https://github.com/pfptcommunity/bulkdnsquery"
+#homepage = "https://github.com/pfptcommunity/bulkdnsquery"
+#documentation = "https://github.com/pfptcommunity/bulkdnsquery"
+#changelog = "https://github.com/pfptcommunity/bulkdnsquery"
 
 [project.scripts]
-dnscheck = "dnscheck:main"
+dnscheck = "bulkdnsquery:main"
