@@ -1,5 +1,5 @@
 # Bulk DNS Query Tool
-[![PyPI Downloads](https://static.pepy.tech/badge/dnscheck)](https://pepy.tech/projects/dnscheck)
+[![PyPI Downloads](https://static.pepy.tech/badge/bulkdnsquery)](https://pepy.tech/projects/bulkdnsquery)
 This tool allow for bulk DNS lookups via CSV or TXT file passed as an argument.
 
 ### Requirements:
@@ -11,14 +11,14 @@ This tool allow for bulk DNS lookups via CSV or TXT file passed as an argument.
 You can install the tool using the following command directly from Github.
 
 ```
-pip install git+https://github.com/pfptcommunity/dnscheck.git
+pip install git+https://github.com/pfptcommunity/bulkdnsquery.git
 ```
 
 or can install the tool using pip.
 
 ```
 # When testing on Ubuntu 24.04 the following will not work:
-pip install dnscheck
+pip install bulkdnsquery
 ```
 
 If you see an error similar to the following:
@@ -49,7 +49,7 @@ hint: See PEP 668 for the detailed specification.
 You should use install pipx or you can configure your own virtual environment and use the command referenced above.
 
 ```
-pipx install dnscheck
+pipx install bulkdnsquery
 ```
 
 ### Usage Options:
