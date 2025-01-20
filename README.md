@@ -90,4 +90,8 @@ View of MX Data
 View of A Data
 ![image](https://github.com/pfptcommunity/dnscheck/assets/83429267/017ee0fc-7452-4c5e-9956-0424f3c2cc70)
 
+View of PTR Data
+![image](https://github.com/user-attachments/assets/166d856f-96cf-43f7-8267-1cbe967a2149)
+
+
 
