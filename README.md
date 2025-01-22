@@ -55,7 +55,7 @@ pipx install bulkdnsquery
 ### Usage Options:
 
 ```
-usage: dnscheck [-h] -i <file> [--input-type {txt,csv}] [--host-ip IP/HOST] [--ns 8.8.8.8 [8.8.8.8 ...]] [--dmarc]
+usage: bulkdnscheck [-h] -i <file> [--input-type {txt,csv}] [--host-ip IP/HOST] [--ns 8.8.8.8 [8.8.8.8 ...]] [--dmarc]
                 [--spf] [--mx] [-a] [-x] [--include-all] [-c] -o <xlsx>
                 [--log-level {DEBUG,INFO,WARNING,ERROR,CRITICAL}]
 

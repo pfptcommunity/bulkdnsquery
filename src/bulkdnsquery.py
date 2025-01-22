@@ -191,7 +191,7 @@ def write_to_excel(dns_data: dict, output_file: str, compact: bool = False) -> N
 
 def main():
     # Argument parsing
-    parser = argparse.ArgumentParser(prog="dnscheck", description="Bulk DNS Lookup Tool",
+    parser = argparse.ArgumentParser(prog="bulkdnsquery", description="Bulk DNS Lookup Tool",
                                      formatter_class=lambda prog: argparse.HelpFormatter(prog, max_help_position=80))
     parser.add_argument('-i', '--input', metavar='<file>', dest="input_file", type=validate_file_path,
                         required=True, help='CSV file containing a list of domains')
