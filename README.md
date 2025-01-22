@@ -5,6 +5,8 @@ This tool allow for bulk DNS lookups via CSV or TXT file passed as an argument.
 ### Requirements:
 
 * Python 3.9+
+* xlswriter
+* dnspython
 
 ### Installing the Package
 
